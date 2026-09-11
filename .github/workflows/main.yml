@@ -1,4 +1,5 @@
 name: RDP
+
 on:
   workflow_dispatch:
 
@@ -9,7 +10,7 @@ jobs:
 
     steps:
       # ─────────────────────────────────────────────
-      # 1. LIBERAR ESPACIO Y MONTAR DISCO EXTRA
+      # 1. LIBERAR ESPAÇO E MONTAR DISCO EXTRA
       # ─────────────────────────────────────────────
       - name: Free Up Space & Mount Extra Disk
         run: |
@@ -54,10 +55,34 @@ jobs:
           New-Item -ItemType Directory -Force -Path "D:\storage" | Out-Null
 
       # ─────────────────────────────────────────────
-      # 3. CONFIGURAR RDP
+      # 2. OTIMIZAR DESEMPENHO DA CPU E SISTEMA
       # ─────────────────────────────────────────────
-      - name: Configure RDP Settings
+      - name: System & CPU Performance Optimization
         run: |
+          Write-Host "=== Applying CPU & Gaming Optimizations ===" -ForegroundColor Cyan
+          
+          # Set High Performance Power Plan
+          powercfg /s 8c5e7cd5-e98b-431e-a701-d00194007347 2>$null
+
+          # Disable Unnecessary Background Services to save CPU/RAM
+          $servicesToStop = @("SysMain", "WSearch", "wuauserv")
+          foreach ($service in $servicesToStop) {
+            Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
+            Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
+          }
+
+          # Adjust Win32PrioritySeparation for maximum CPU priority on foreground applications
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl' `
+            -Name "Win32PrioritySeparation" -Value 38 -Force
+
+          Write-Host "CPU and System optimizations applied successfully." -ForegroundColor Green
+
+      # ─────────────────────────────────────────────
+      # 3. CONFIGURAR RDP E AJUSTES DE CÂMERA/60FPS
+      # ─────────────────────────────────────────────
+      - name: Configure RDP Settings & Fix 3D Camera/FPS
+        run: |
+          # Basic RDP Settings
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
             -Name "fDenyTSConnections" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
@@ -65,12 +90,24 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
             -Name "SecurityLayer" -Value 0 -Force
 
+          # Enable RemoteFX / AVC444 for smoother rendering & 60 FPS
+          $rdpGpoPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
+          if (-not (Test-Path $rdpGpoPath)) { New-Item -Path $rdpGpoPath -Force | Out-Null }
+          
+          Set-ItemProperty -Path $rdpGpoPath -Name "SelectNetworkDetect" -Value 1 -Force
+          Set-ItemProperty -Path $rdpGpoPath -Name "fEnableWinstationGFXRender" -Value 1 -Force
+          
+          # Force 60 FPS target for RDP stream
+          $dwmPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations'
+          Set-ItemProperty -Path $dwmPath -Name "DWMFRAMEINTERVAL" -Value 15 -Force
+
+          # Firewall Config
           netsh advfirewall firewall delete rule name="RDP-Tailscale" 2>$null
           netsh advfirewall firewall add rule name="RDP-Tailscale" `
             dir=in action=allow protocol=TCP localport=3389
 
           Restart-Service -Name TermService -Force
-          Write-Host "RDP configured." -ForegroundColor Green
+          Write-Host "RDP and RemoteFX Graphics configured." -ForegroundColor Green
 
       # ─────────────────────────────────────────────
       # 4. CREAR USUARIO RDP
@@ -183,7 +220,7 @@ jobs:
           Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
           Write-Host ""
 
-          # Mantener la sesión activa
+          # Mantener a sessão ativa com baixo uso de processamento
           $i = 0
           while ($true) {
             Start-Sleep -Seconds 60
