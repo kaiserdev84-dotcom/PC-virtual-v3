@@ -214,9 +214,9 @@ jobs:
           Write-Host "║  Password: $env:RDP_PASSWORD"
           Write-Host "╠══════════════════════════════════════════════════╣" -ForegroundColor Cyan
           Write-Host "║  STORAGE                                         ║" -ForegroundColor Cyan
-          Write-Host "║  C: ~16GB (sistema)                              ║"
-          Write-Host "║  D: ~95GB (runner disk)                          ║"
-          Write-Host "║  E: ~225GB (VHD extra)                           ║"
+          Write-Host "║  C: ~14GB (sistema)                              ║"
+          Write-Host "║  D: ~60GB (runner disk)                          ║"
+          Write-Host "║  E: ~100GB (VHD extra)                           ║"
           Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
           Write-Host ""
 
